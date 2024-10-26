@@ -5,7 +5,7 @@
  * Author URI:https://www.i13websolution.com
  * Description:This is beautiful responsive portfolio grid with responsive lightbox.Add any number of images,links,video from admin panel. 
  * Author:I Thirteen Web Solution 
- * Version:1.0.22
+ * Version:1.0.23
  * Text Domain:responsive-filterable-portfolio
  * Domain Path: /languages
  */
@@ -270,21 +270,31 @@ function rfp_check_file_exist_portfolio_callback() {
 
     if (isset($_POST) && is_array($_POST) && isset($_POST['url'])) {
 
+        $url=esc_url_raw($_POST['url']);
+        $result = parse_url($url);
+        
+        if(isset($result['host']) && 'img.youtube.com'==$result['host']){
+        
+            $retrieved_nonce = isset($_REQUEST['vNonce']) ? sanitize_text_field(wp_unslash($_REQUEST['vNonce'])) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.NoNonceVerification
+            if (!wp_verify_nonce($retrieved_nonce, 'vNonce')) {
 
-        $retrieved_nonce = isset($_REQUEST['vNonce']) ? sanitize_text_field(wp_unslash($_REQUEST['vNonce'])) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.NoNonceVerification
-        if (!wp_verify_nonce($retrieved_nonce, 'vNonce')) {
 
+                wp_die('Security check fail');
+            }
 
-            wp_die('Security check fail');
+            $response = wp_safe_remote_get($url);
+
+            if ( is_wp_error( $response ) ) {
+                return false;
+            }
+
+            $httpCode = wp_remote_retrieve_response_code($response);
+
+            echo esc_html((string) $httpCode);
+            die;
         }
-
-        $response = wp_remote_get(esc_url_raw($_POST['url']));
-        $httpCode = wp_remote_retrieve_response_code($response);
-
-        echo esc_html((string) $httpCode);
-        die;
     }
-    //echo die;
+    die;
 }
 
 function i13_get_http_response_code_portfolio($url) {
