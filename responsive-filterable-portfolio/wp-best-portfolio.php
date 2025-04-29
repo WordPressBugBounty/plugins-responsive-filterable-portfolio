@@ -5,7 +5,7 @@
  * Author URI:https://www.i13websolution.com
  * Description:This is beautiful responsive portfolio grid with responsive lightbox.Add any number of images,links,video from admin panel. 
  * Author:I Thirteen Web Solution 
- * Version:1.0.23
+ * Version:1.0.24
  * Text Domain:responsive-filterable-portfolio
  * Domain Path: /languages
  */
@@ -391,7 +391,7 @@ function rfp_responsive_portfolio_plus_lightbox_load_styles_and_js() {
         wp_register_style('filterMediank', plugins_url('/css/filterMediank.css', __FILE__));
         wp_register_style('filterMediank-lbox', plugins_url('/css/filterMediank-lbox.css', __FILE__), array(), '1.0.15');
         wp_register_script('filterMediank', plugins_url('/js/filterMediank.js', __FILE__), array('jquery'), '1.0.19');
-        wp_register_script('filterMediank-lbox-js', plugins_url('/js/filterMediank-lbox-js.js', __FILE__), array('jquery'), '1.0.14');
+        wp_register_script('filterMediank-lbox-js', plugins_url('/js/filterMediank-lbox-js.js', __FILE__), array('jquery'), '1.0.24');
     }
 }
 
@@ -2237,6 +2237,7 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                                                     validExtensions[1] = 'jpeg';
                                                                     validExtensions[2] = 'png';
                                                                     validExtensions[3] = 'gif';
+                                                                    validExtensions[4] = 'webp';
 
                                                                     var inarr = parseInt(jQuery.inArray(attachment.subtype, validExtensions));
                                                                     if (inarr > 0 && attachment.type.toLowerCase() == 'image') {
@@ -2467,6 +2468,7 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                                             validExtensions[1] = 'jpeg';
                                                             validExtensions[2] = 'png';
                                                             validExtensions[3] = 'gif';
+                                                            validExtensions[4] = 'webp';
 
                                                             var inarr = parseInt(jQuery.inArray(attachment.subtype, validExtensions));
                                                             if (inarr > 0 && attachment.type.toLowerCase() == 'image') {
@@ -2701,6 +2703,7 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                                             validExtensions[1] = 'jpeg';
                                                             validExtensions[2] = 'png';
                                                             validExtensions[3] = 'gif';
+                                                            validExtensions[4] = 'webp';
 
                                                             var inarr = parseInt(jQuery.inArray(attachment.subtype, validExtensions));
                                                             if (inarr > 0 && attachment.type.toLowerCase() == 'image') {
