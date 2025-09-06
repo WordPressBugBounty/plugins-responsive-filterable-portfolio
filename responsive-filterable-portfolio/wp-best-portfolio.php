@@ -5,7 +5,7 @@
  * Author URI:https://www.i13websolution.com
  * Description:This is beautiful responsive portfolio grid with responsive lightbox.Add any number of images,links,video from admin panel. 
  * Author:I Thirteen Web Solution 
- * Version:1.0.24
+ * Version:1.0.25
  * Text Domain:responsive-filterable-portfolio
  * Domain Path: /languages
  */
@@ -1380,10 +1380,15 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                         if (trim($_POST ['HdnMediaSelection']) != '') {
 
                             $pInfo = pathinfo($HdnMediaSelection);
+                            $file_name_ = $pInfo ['basename'];
                             $ext = $pInfo ['extension'];
                             $imagename = $vid . '_big.' . $ext;
                             $imageUploadTo = $pathToImagesFolder . '/' . $imagename;
 
+                            $validate = wp_check_filetype( $file_name_ );
+                            if ( $validate['type'] == false ) {
+                                    die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
+                            }
                             @copy($HdnMediaSelection, $imageUploadTo);
                             if (!file_exists($imageUploadTo)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
@@ -1448,9 +1453,16 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
 
                         if (trim($_POST ['HdnMediaSelection']) != '') {
                             $pInfo = pathinfo($HdnMediaSelection);
+                            $file_name_ = $pInfo ['basename'];
                             $ext = $pInfo ['extension'];
                             $imagename = $vid . '_big.' . $ext;
                             $imageUploadTo = $pathToImagesFolder . '/' . $imagename;
+                            
+                            $validate = wp_check_filetype( $file_name_ );
+                            if ( $validate['type'] == false ) {
+                                    die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
+                            }
+
                             @copy($HdnMediaSelection, $imageUploadTo);
                             if (!file_exists($imageUploadTo)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
@@ -1525,8 +1537,14 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
 
                             $pInfo = pathinfo($HdnMediaSelection);
                             $ext = $pInfo ['extension'];
+                            $file_name_ = $pInfo ['basename'];
                             $imagename = $vid . '_big.' . $ext;
                             $imageUploadTo = $pathToImagesFolder . '/' . $imagename;
+
+                            $validate = wp_check_filetype( $file_name_ );
+                            if ( $validate['type'] == false ) {
+                                 die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
+                            }
 
                             @copy($HdnMediaSelection, $imageUploadTo);
                             if (!file_exists($imageUploadTo)) {
@@ -1591,8 +1609,15 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                         if (trim($_POST ['HdnMediaSelection_image']) != '') {
                             $pInfo = pathinfo($HdnMediaSelection);
                             $ext = $pInfo ['extension'];
+                            $file_name_ = $pInfo ['basename'];
                             $imagename = $vid . '_big.' . $ext;
                             $imageUploadTo = $pathToImagesFolder . '/' . $imagename;
+                            
+                            $validate = wp_check_filetype( $file_name_ );
+                            if ( $validate['type'] == false ) {
+                                 die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
+                            }
+                            
                             @copy($HdnMediaSelection, $imageUploadTo);
                             if (!file_exists($imageUploadTo)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
@@ -1670,9 +1695,14 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
 
                             $pInfo = pathinfo($HdnMediaSelection);
                             $ext = $pInfo ['extension'];
+                            $file_name_ = $pInfo ['basename'];
                             $imagename = $vid . '_big.' . $ext;
                             $imageUploadTo = $pathToImagesFolder . '/' . $imagename;
 
+                            $validate = wp_check_filetype( $file_name_ );
+                            if ( $validate['type'] == false ) {
+                                    die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
+                            }
                             @copy($HdnMediaSelection, $imageUploadTo);
                             if (!file_exists($imageUploadTo)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
@@ -1739,8 +1769,15 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                         if (trim($_POST ['HdnMediaSelection_link']) != '') {
                             $pInfo = pathinfo($HdnMediaSelection);
                             $ext = $pInfo ['extension'];
+                            $file_name_ = $pInfo ['basename'];
                             $imagename = $vid . '_big.' . $ext;
                             $imageUploadTo = $pathToImagesFolder . '/' . $imagename;
+                            
+                            
+                            $validate = wp_check_filetype( $file_name_ );
+                            if ( $validate['type'] == false ) {
+                                    die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
+                            }
                             @copy($HdnMediaSelection, $imageUploadTo);
                             if (!file_exists($imageUploadTo)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);

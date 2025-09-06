@@ -4,8 +4,8 @@ Donate link:http://www.i13websolution.com/donate-wordpress_image_thumbnail.php
 Tags:media grid,video portfolio plugin,portfolio gallery,portfolio grid gallery,responsive media gallery,wordpress filterable portfolio plugin,wordpress media gallery,wordpress media gallery lightbox,wordpress portfolio lightbox,wordpress free popup plugin
 Requires at least:3.0
 Tested up to:6.8
-Version:1.0.24
-Stable tag:1.0.24
+Version:1.0.25
+Stable tag:1.0.25
 License:GPLv2 or later
 License URI:http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,12 @@ This plugin is free for everyone! Since it's released under the GPL, you can use
 
 
 == Changelog ==
+
+= 1.0.25 =
+
+* Fixed security- Unrestricted Upload of File
+
+
 
 = 1.0.24 =
 
