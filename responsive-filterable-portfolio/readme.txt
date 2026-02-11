@@ -3,7 +3,7 @@ Contributors:nik00726
 Donate link:http://www.i13websolution.com/donate-wordpress_image_thumbnail.php
 Tags:media grid,video portfolio plugin,portfolio gallery,portfolio grid gallery,responsive media gallery,wordpress filterable portfolio plugin,wordpress media gallery,wordpress media gallery lightbox,wordpress portfolio lightbox,wordpress free popup plugin
 Requires at least:3.0
-Tested up to:6.8
+Tested up to:6.9
 Version:1.0.25
 Stable tag:1.0.25
 License:GPLv2 or later
