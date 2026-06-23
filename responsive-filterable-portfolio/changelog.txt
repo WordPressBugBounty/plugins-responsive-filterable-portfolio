@@ -1,0 +1,105 @@
+== Full Changelog ==
+
+= 1.0.27 =
+* Added a friendly, dismissible review request prompt on the plugin admin pages.
+* Added Pro feature previews in the admin UI so you can see what Pro unlocks.
+* Cleaned up the admin side panel.
+
+= 1.0.26 =
+* Added a native Gutenberg block — add your portfolio from the block editor, no shortcode needed.
+* Added an icon to the admin menu.
+* Replaced third-party ads in the admin side panel with Pro version information.
+* Fixed an upgrade link that was not displaying.
+
+= 1.0.25 =
+* Fixed security - Unrestricted Upload of File
+
+= 1.0.24 =
+* Added webp image support
+* Tested with WordPress 6.8
+
+= 1.0.23 =
+* Fixed SSRF issue
+
+= 1.0.22 =
+* Fixed E_Error - Too few arguments to function
+
+= 1.0.21 =
+* Make shortcode compatible with block editor
+* Tested with WordPress 6.3
+
+= 1.0.20 =
+* Fixed vulnerability
+* Tested with WordPress 6.2
+
+= 1.0.19 =
+* Fixed portfolio not working inside tabs
+
+= 1.0.18 =
+* Fixed html break in some themes
+* Tested with WordPress 5.9
+
+= 1.0.17 =
+* Fixed youtube fetch video info, undefined variable problem
+* Tested with WordPress 5.8
+
+= 1.0.16 =
+* Fixed cant fetch youtube video title.
+
+= 1.0.15 =
+* Added option to resize image or not.
+
+= 1.0.14 =
+* Fixed lightbox not loading in jQuery 3.x
+
+= 1.0.13 =
+* Remove jQuery.noConflict() as it cause problem.
+* Fixed empty tags issue.
+
+= 1.0.12 =
+* Improve portfolio loading.
+
+= 1.0.11 =
+* Minor fix. Shortcode to visible upper side in preview mode
+* Tested with WordPress 5.3
+
+= 1.0.10 =
+* Improve code so that plugin keeps working when themes jquery included into footer
+* Tested with WordPress 5.2
+
+= 1.0.9 =
+* Improve security
+* Added capability features
+* Tested with WordPress 5.1
+
+= 1.0.8 =
+* fix Security Vulnerability: Missing Validation on TLS Connections
+* Improve pagination in admin
+
+= 1.0.7 =
+* Improve admin UI
+* Tested with WordPress 5.0
+
+= 1.0.6 =
+* Fix Metacafe image not fetching
+
+= 1.0.5 =
+* Fix Javascript and css issue when there integer tag
+
+= 1.0.4 =
+* Fix shortcode have extra quote that made shortcode confusing
+
+= 1.0.3 =
+* make plugin translation ready
+* Added Manage media with sorting
+* Search media
+
+= 1.0.2 =
+* Fixed for worked with multiple versions of fancybox
+
+= 1.0.1 =
+* Added function to copy image via curl if copy function fails.
+* Tested with WordPress 4.6
+
+= 1.0 =
+* Stable 1.0 first release

@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "i13-rfp/portfolio-grid",
+	"version": "1.0.26",
+	"title": "Responsive Portfolio",
+	"category": "widgets",
+	"icon": "format-gallery",
+	"description": "Display your responsive filterable portfolio with lightbox.",
+	"keywords": [ "portfolio", "gallery", "filter", "lightbox" ],
+	"textdomain": "responsive-filterable-portfolio",
+	"editorScript": "file:./build/index.js",
+	"render": "file:./render.php",
+	"supports": { "html": false, "align": [ "wide", "full" ] }
+}

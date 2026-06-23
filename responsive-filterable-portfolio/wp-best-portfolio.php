@@ -5,7 +5,7 @@
  * Author URI:https://www.i13websolution.com
  * Description:This is beautiful responsive portfolio grid with responsive lightbox.Add any number of images,links,video from admin panel. 
  * Author:I Thirteen Web Solution 
- * Version:1.0.25
+ * Version:1.0.27
  * Text Domain:responsive-filterable-portfolio
  * Domain Path: /languages
  */
@@ -17,6 +17,41 @@ register_activation_hook(__FILE__, 'rfp_install_responsive_portfolio_plus_lightb
 register_deactivation_hook(__FILE__, 'rfp_responsive_filterable_portfolio_remove_access_capabilities');
 add_action('wp_enqueue_scripts', 'rfp_responsive_portfolio_plus_lightbox_load_styles_and_js');
 add_shortcode('print_responsive_portfolio_plus_lightbox', 'rfp_print_responsive_portfolio_plus_lightbox_func');
+
+// Native Gutenberg block (free version has a single portfolio grid).
+require_once plugin_dir_path( __FILE__ ) . 'blocks/block-loader.php';
+
+/**
+ * Sidebar (side-panel) Pro upgrade box — styled to match the i13 house design
+ * (gold-bordered card, star header, icon benefit rows, orange CTA button).
+ */
+function rfp_free_pro_sidebar_box() {
+	$url = 'https://www.i13websolution.com/wordpress-responsive-media-portfolio-grid.html';
+	$benefits = array(
+		array( '🎨', __( 'Masonry & Justified layouts', 'responsive-filterable-portfolio' ) ),
+		array( '🗂️', __( 'Unlimited portfolio grids', 'responsive-filterable-portfolio' ) ),
+		array( '🧩', __( 'Elementor widget + Gutenberg block', 'responsive-filterable-portfolio' ) ),
+		array( '🎬', __( 'Vimeo, Metacafe & HTML5 video', 'responsive-filterable-portfolio' ) ),
+		array( '⚡', __( 'Grid duplication, captions & more', 'responsive-filterable-portfolio' ) ),
+	);
+	?>
+	<div style="border:2px solid #f0a500;border-radius:10px;padding:18px 18px 20px;background:#fff;max-width:320px;margin:0 0 18px;">
+		<div style="font-size:17px;font-weight:700;color:#222;margin-bottom:14px;">
+			<span style="color:#f0a500;">&#9733;</span> <?php echo esc_html__( 'Upgrade to PRO', 'responsive-filterable-portfolio' ); ?>
+		</div>
+		<?php foreach ( $benefits as $b ) : ?>
+			<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13.5px;color:#3c434a;line-height:1.4;">
+				<span style="font-size:15px;line-height:1.3;"><?php echo $b[0]; // emoji icon ?></span>
+				<span><?php echo esc_html( $b[1] ); ?></span>
+			</div>
+		<?php endforeach; ?>
+		<a target="_blank" rel="noopener" href="<?php echo esc_url( $url ); ?>"
+			style="display:block;text-align:center;background:#f0a500;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 16px;border-radius:7px;margin-top:16px;">
+			<?php echo esc_html__( 'Get PRO Version', 'responsive-filterable-portfolio' ); ?> &rarr;
+		</a>
+	</div>
+	<?php
+}
 add_action('admin_notices', 'rfp_responsive_portfolio_plus_lightbox_admin_notices');
 
 add_action('wp_ajax_rfp_check_file_exist_portfolio', 'rfp_check_file_exist_portfolio_callback');
@@ -385,6 +420,221 @@ function rfp_responsive_portfolio_plus_lightbox_admin_notices() {
     }
 }
 
+/**
+ * ---------------------------------------------------------------------------
+ *  Review request prompt
+ *  Shows a friendly, dismissible admin notice asking the user to rate the
+ *  plugin on WordPress.org. Appears only on the plugin's own admin pages,
+ *  a few days after install, and can be permanently dismissed, postponed,
+ *  or marked as "already rated".
+ * ---------------------------------------------------------------------------
+ */
+
+// Record the install time so we can delay the first ask.
+// Existing users (those who already have portfolio data when they update to
+// this version) are flagged so they see the prompt right away, with no delay.
+// Genuinely new installs get the normal waiting period.
+function rfp_review_maybe_set_install_time() {
+    if (!get_option('rfp_review_install_time')) {
+        global $wpdb;
+        $table    = $wpdb->prefix . 'e_portfolio';
+        $has_data = false;
+
+        // Guard the table check in case the table doesn't exist yet.
+        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table) {
+            $has_data = ((int) $wpdb->get_var("SELECT COUNT(*) FROM `$table`")) > 0;
+        }
+
+        // 'existing' = updating user with content, 'new' = fresh install.
+        add_option('rfp_review_user_type', $has_data ? 'existing' : 'new');
+        add_option('rfp_review_install_time', time());
+    }
+}
+add_action('admin_init', 'rfp_review_maybe_set_install_time');
+
+/**
+ * Decide whether the review notice should be shown right now.
+ */
+function rfp_review_should_show_notice() {
+    // Only to users who can manage the plugin.
+    if (!current_user_can('rfp_filterablel_portfolio_settings')) {
+        return false;
+    }
+
+    // Permanently dismissed or already rated.
+    $state = get_option('rfp_review_notice_state', '');
+    if ($state === 'dismissed' || $state === 'rated') {
+        return false;
+    }
+
+    // Only on this plugin's own admin screens.
+    $page = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : '';
+    $allowed_pages = array(
+        'responsive_portfolio_with_lightbox',
+        'responsive_portfolio_with_lightbox_media_management',
+        'responsive_portfolio_with_lightbox_media_preview',
+    );
+    if (!in_array($page, $allowed_pages, true)) {
+        return false;
+    }
+
+    // Honour a "remind me later" snooze.
+    $remind_after = (int) get_option('rfp_review_remind_after', 0);
+    if ($remind_after && time() < $remind_after) {
+        return false;
+    }
+
+    // Existing users (had portfolio data when they updated) see it right away.
+    // New installs wait a few days before the first ask.
+    if (get_option('rfp_review_user_type', 'new') !== 'existing') {
+        $install_time = (int) get_option('rfp_review_install_time', time());
+        $delay = 5 * DAY_IN_SECONDS;
+        if (time() < ($install_time + $delay)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Render the review request notice.
+ */
+function rfp_review_request_notice() {
+    if (!rfp_review_should_show_notice()) {
+        return;
+    }
+
+    $review_url = 'https://wordpress.org/support/plugin/responsive-filterable-portfolio/reviews/?filter=5#new-post';
+    $nonce      = wp_create_nonce('rfp_review_nonce');
+    ?>
+    <div class="notice notice-info is-dismissible rfp-review-notice" style="border-left-color:#f0a500;">
+        <p style="font-size:14px;line-height:1.6;margin:.6em 0;">
+            <span style="color:#f0a500;font-size:16px;">&#9733;&#9733;&#9733;&#9733;&#9733;</span><br>
+            <?php echo esc_html__("Hey! You've been using Responsive Filterable Portfolio for a little while now — we hope it's helping you show off your work. If you have a moment, a quick 5-star review would mean the world to us and helps other users find the plugin.", 'responsive-filterable-portfolio'); ?>
+        </p>
+        <p>
+            <a href="<?php echo esc_url($review_url); ?>" target="_blank" rel="noopener" class="button button-primary rfp-review-action" data-rfp-review="rated" style="background:#f0a500;border-color:#d68f00;">
+                <?php echo esc_html__('Sure, leave a review', 'responsive-filterable-portfolio'); ?>
+            </a>
+            &nbsp;
+            <a href="#" class="button rfp-review-action" data-rfp-review="later">
+                <?php echo esc_html__('Maybe later', 'responsive-filterable-portfolio'); ?>
+            </a>
+            &nbsp;
+            <a href="#" class="rfp-review-action" data-rfp-review="dismissed" style="color:#888;text-decoration:none;line-height:28px;">
+                <?php echo esc_html__("I already did / Don't show again", 'responsive-filterable-portfolio'); ?>
+            </a>
+        </p>
+    </div>
+    <script>
+    (function () {
+        var nonce = '<?php echo esc_js($nonce); ?>';
+        var ajaxurl = '<?php echo esc_js(admin_url('admin-ajax.php')); ?>';
+        function send(action, link) {
+            var notice = link.closest('.rfp-review-notice');
+            var data = new FormData();
+            data.append('action', 'rfp_review_dismiss');
+            data.append('rfp_review_action', action);
+            data.append('nonce', nonce);
+            fetch(ajaxurl, { method: 'POST', credentials: 'same-origin', body: data });
+            if (notice) {
+                notice.style.transition = 'opacity .3s';
+                notice.style.opacity = '0';
+                setTimeout(function () { if (notice.parentNode) { notice.parentNode.removeChild(notice); } }, 320);
+            }
+        }
+        document.querySelectorAll('.rfp-review-action').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                var action = this.getAttribute('data-rfp-review');
+                // For the actual review link, let it open but still record the choice.
+                if (action !== 'rated') { e.preventDefault(); }
+                send(action, this);
+            });
+        });
+        // Native dismiss (X) = "maybe later".
+        document.querySelectorAll('.rfp-review-notice .notice-dismiss').forEach(function () {});
+        var observer = document.querySelector('.rfp-review-notice');
+        if (observer) {
+            observer.addEventListener('click', function (e) {
+                if (e.target && e.target.classList.contains('notice-dismiss')) {
+                    var data = new FormData();
+                    data.append('action', 'rfp_review_dismiss');
+                    data.append('rfp_review_action', 'later');
+                    data.append('nonce', nonce);
+                    fetch(ajaxurl, { method: 'POST', credentials: 'same-origin', body: data });
+                }
+            });
+        }
+    })();
+    </script>
+    <?php
+}
+add_action('admin_notices', 'rfp_review_request_notice');
+
+/**
+ * AJAX handler for the review notice actions.
+ */
+function rfp_review_dismiss_callback() {
+    if (!current_user_can('rfp_filterablel_portfolio_settings')) {
+        wp_send_json_error('forbidden');
+    }
+    if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'rfp_review_nonce')) {
+        wp_send_json_error('bad_nonce');
+    }
+
+    $action = isset($_POST['rfp_review_action']) ? sanitize_text_field(wp_unslash($_POST['rfp_review_action'])) : '';
+
+    switch ($action) {
+        case 'rated':
+        case 'dismissed':
+            update_option('rfp_review_notice_state', $action);
+            break;
+        case 'later':
+        default:
+            // Snooze for a week.
+            update_option('rfp_review_remind_after', time() + (7 * DAY_IN_SECONDS));
+            break;
+    }
+
+    wp_send_json_success($action);
+}
+add_action('wp_ajax_rfp_review_dismiss', 'rfp_review_dismiss_callback');
+
+/**
+ * Inline styles for "Pro" locked affordances shown in the free UI
+ * (locked video types, layout options, add-portfolio button, etc.).
+ * Loaded only on this plugin's admin pages.
+ */
+function rfp_pro_locked_styles() {
+    $page = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : '';
+    if (strpos($page, 'responsive_portfolio_with_lightbox') !== 0) {
+        return;
+    }
+    ?>
+    <style>
+        .rfp-pro-locked { color:#9aa0a6; cursor:not-allowed; white-space:nowrap; }
+        .rfp-pro-locked input[disabled],
+        .rfp-pro-locked option:disabled { cursor:not-allowed; }
+        .rfp-pro-tag {
+            display:inline-block; font-size:10px; font-weight:700; line-height:1;
+            text-transform:uppercase; letter-spacing:.3px; text-decoration:none;
+            color:#fff; background:#f0a500; padding:2px 6px; border-radius:3px;
+            vertical-align:middle; margin-left:2px;
+        }
+        .rfp-pro-tag:hover { background:#d68f00; color:#fff; }
+        .rfp-pro-locked-select { color:#9aa0a6; }
+        .rfp-add-portfolio-pro {
+            display:inline-block; margin:8px 0; padding:6px 12px;
+            border:1px dashed #f0a500; border-radius:4px; color:#8a6d00;
+            background:#fff8e6; text-decoration:none; font-size:13px;
+        }
+        .rfp-add-portfolio-pro:hover { background:#fff1cc; color:#8a6d00; }
+    </style>
+    <?php
+}
+add_action('admin_head', 'rfp_pro_locked_styles');
+
 function rfp_responsive_portfolio_plus_lightbox_load_styles_and_js() {
     if (!is_admin()) {
 
@@ -465,7 +715,7 @@ function rfp_install_responsive_portfolio_plus_lightbox() {
 
 function rfp_responsive_portfolio_plus_lightbox_add_admin_menu() {
 
-    $hook_suffix = add_menu_page(__('Responsive Portfolio', 'responsive-filterable-portfolio'), __('Responsive Portfolio', 'responsive-filterable-portfolio'), 'rfp_filterablel_portfolio_settings', 'responsive_portfolio_with_lightbox', 'rfp_responsive_portfolio_with_lightbox_admin_options_func');
+    $hook_suffix = add_menu_page(__('Responsive Portfolio', 'responsive-filterable-portfolio'), __('Responsive Portfolio', 'responsive-filterable-portfolio'), 'rfp_filterablel_portfolio_settings', 'responsive_portfolio_with_lightbox', 'rfp_responsive_portfolio_with_lightbox_admin_options_func', 'dashicons-format-gallery');
     $hook_suffix = add_submenu_page('responsive_portfolio_with_lightbox', __('Portfolio Settings', 'responsive-filterable-portfolio'), __('Portfolio Settings', 'responsive-filterable-portfolio'), 'rfp_filterablel_portfolio_settings', 'responsive_portfolio_with_lightbox', 'rfp_responsive_portfolio_with_lightbox_admin_options_func');
     $hook_suffix_image = add_submenu_page('responsive_portfolio_with_lightbox', __('Manage Media', 'responsive-filterable-portfolio'), __('Manage Media', 'responsive-filterable-portfolio'), 'rfp_filterablel_portfolio_view_media', 'responsive_portfolio_with_lightbox_media_management', 'rfp_responsive_portfolio_with_lightbox_media_management_func');
     $hook_suffix_prev = add_submenu_page('responsive_portfolio_with_lightbox', __('Preview Portfolio', 'responsive-filterable-portfolio'), __('Preview Portfolio', 'responsive-filterable-portfolio'), 'rfp_filterablel_portfolio_preview', 'responsive_portfolio_with_lightbox_media_preview', 'rfp_responsive_portfolio_with_lightbox_media_preview_func');
@@ -574,14 +824,8 @@ function rfp_responsive_portfolio_with_lightbox_admin_options_func() {
                                         fjs.parentNode.insertBefore(js, fjs);
                                     }(document, 'script', 'facebook-jssdk'));</script>
                             </td>
-                            <td>
-                                <a target="_blank" title="Donate" href="https://www.i13websolution.com/donate-wordpress_image_thumbnail.php">
-                                    <img id="help us for free plugin" height="30" width="90" src="<?php echo plugins_url('images/paypaldonate.jpg', __FILE__); ?>" border="0" alt="help us for free plugin" title="help us for free plugin">
-                                </a>
-                            </td>
                         </tr>
                     </table>
-                    <span><h3 style="color: blue;"><a target="_blank" href="https://www.i13websolution.com/wordpress-responsive-media-portfolio-grid.html"><?php __('UPGRADE TO PRO VERSION', 'responsive-filterable-portfolio'); ?></a></h3></span>
 
                     <?php
                     $messages = get_option('wp_best_portfolio_msg');
@@ -609,7 +853,6 @@ function rfp_responsive_portfolio_with_lightbox_admin_options_func() {
                     update_option('wp_best_portfolio_msg', array());
                     ?>
 
-                    <span><h3 style="color: blue;"><a target="_blank" href="https://www.i13websolution.com/wordpress-responsive-media-portfolio-grid.html"><?php echo __('UPGRADE TO PRO VERSION', 'responsive-filterable-portfolio'); ?></a></h3></span>  
                     <h2><?php echo __('Edit Portfolio', 'responsive-filterable-portfolio'); ?></h2>
                     <br>
                     <div id="poststuff">
@@ -634,6 +877,30 @@ function rfp_responsive_portfolio_with_lightbox_admin_options_func() {
                                                 </tr>
                                             </table>
 
+                                            <div style="clear: both"></div>
+                                        </div>
+                                    </div>
+                                    <div class="stuffbox" id="namediv" style="width: 100%;">
+                                        <h3>
+                                            <label><?php echo __('Grid Layout Style', 'responsive-filterable-portfolio'); ?></label>
+                                        </h3>
+                                        <div class="inside">
+                                            <table>
+                                                <tr>
+                                                    <td>
+                                                        <select id="rfp_layout_style" name="rfp_layout_style" style="width:200px;">
+                                                            <option value="grid" selected="selected"><?php echo __('Standard Grid', 'responsive-filterable-portfolio'); ?></option>
+                                                            <option value="" disabled class="rfp-pro-locked-select"><?php echo __('Masonry — Pro', 'responsive-filterable-portfolio'); ?></option>
+                                                            <option value="" disabled class="rfp-pro-locked-select"><?php echo __('Justified — Pro', 'responsive-filterable-portfolio'); ?></option>
+                                                        </select>
+                                                        <p style="font-size:12px;margin:6px 0 0;">
+                                                            <a href="https://i13websolution.com/product/wordpress-media-grid-filterable-portfolio-pro-plugin/" target="_blank" rel="noopener" style="text-decoration:none;color:#8a6d00;"><?php echo __('Unlock Masonry &amp; Justified layouts', 'responsive-filterable-portfolio'); ?> <span class="rfp-pro-tag"><?php echo __('Pro', 'responsive-filterable-portfolio'); ?></span></a>
+                                                        </p>
+                                                        <div style="clear: both"></div>
+                                                        <div></div>
+                                                    </td>
+                                                </tr>
+                                            </table>
                                             <div style="clear: both"></div>
                                         </div>
                                     </div>
@@ -833,30 +1100,7 @@ function rfp_responsive_portfolio_with_lightbox_admin_options_func() {
 
 
                     <div id="postbox-container-1" class="postbox-container" > 
-
-                        <div class="postbox"> 
-                            <h3 class="hndle"><span></span><?php echo __('New DIVI AI Theme', 'responsive-filterable-portfolio'); ?></h3> 
-                            <div class="inside">
-                                <center><a href="https://www.elegantthemes.com/affiliates/idevaffiliate.php?id=11715&url=80806" target="_blank">
-                                        <img border="0" src="<?php echo plugins_url('images/divi_300x250.jpg', __FILE__); ?>" width="250" height="250">
-                                    </a></center>
-
-                                <div style="margin:10px 5px">
-
-                                </div>
-                            </div></div>
-                        <div class="postbox"> 
-                            <h3 class="hndle"><span></span><?php echo __('Google For Business Coupon', 'responsive-filterable-portfolio'); ?></h3> 
-                            <div class="inside">
-                                <center><a href="https://goo.gl/OJBuHT" target="_blank">
-                                        <img src="<?php echo plugins_url('images/g-suite-promo-code-4.png', __FILE__); ?>" width="250" height="250" border="0">
-                                    </a></center>
-                                <div style="margin:10px 5px">
-                                </div>
-                            </div>
-
-                        </div>
-
+                        <?php rfp_free_pro_sidebar_box(); ?>
                     </div>   
                 </div>     
             </div>       
@@ -927,14 +1171,8 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                             fjs.parentNode.insertBefore(js, fjs);
                                         }(document, 'script', 'facebook-jssdk'));</script>
                                 </td>
-                                <td>
-                                    <a target="_blank" title="Donate" href="http://www.i13websolution.com/donate-wordpress_image_thumbnail.php">
-                                        <img id="help us for free plugin" height="30" width="90" src="<?php echo plugins_url('images/paypaldonate.jpg', __FILE__); ?>" border="0" alt="help us for free plugin" title="help us for free plugin">
-                                    </a>
-                                </td>
                             </tr>
                         </table>
-                        <span><h3 style="color: blue;"><a target="_blank" href="http://www.i13websolution.com/wordpress-responsive-media-portfolio-grid.html"><?php echo __('UPGRADE TO PRO VERSION', 'responsive-filterable-portfolio'); ?></a></h3></span>
                         <?php
                         $messages = get_option('wp_best_portfolio_msg');
                         $type = '';
@@ -974,6 +1212,7 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                         <select name="action_upper" id="action_upper">
                                             <option selected="selected" value="-1"><?php echo __('Bulk Actions', 'responsive-filterable-portfolio'); ?></option>
                                             <option value="delete"><?php echo __('Delete', 'responsive-filterable-portfolio'); ?></option>
+                                            <option value="" disabled class="rfp-pro-locked-select"><?php echo __('Drag &amp; drop reorder — Pro', 'responsive-filterable-portfolio'); ?></option>
                                         </select> 
                                         <input type="submit" value="<?php echo __('Apply', 'responsive-filterable-portfolio'); ?>" class="button-secondary action" id="deleteselected" name="deleteselected" onclick="return confirmDelete_bulk();">
                                     </div>
@@ -1196,6 +1435,7 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                         <select name="action" id="action_bottom">
                                             <option selected="selected" value="-1"><?php echo __('Bulk Actions', 'responsive-filterable-portfolio'); ?></option>
                                             <option value="delete"><?php echo __('Delete', 'responsive-filterable-portfolio'); ?></option>
+                                            <option value="" disabled class="rfp-pro-locked-select"><?php echo __('Drag &amp; drop reorder — Pro', 'responsive-filterable-portfolio'); ?></option>
                                         </select> 
                                         <?php wp_nonce_field('action_settings_mass_delete', 'mass_delete_nonce'); ?>
                                         <input type="submit" value="<?php echo __('Apply', 'responsive-filterable-portfolio'); ?>" class="button-secondary action" id="deleteselected" name="deleteselected" onclick="return confirmDelete_bulk();">
@@ -1255,31 +1495,7 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                     </div>
                 </div>
                 <div id="postbox-container-1" class="postbox-container" > 
-
-                    <div class="postbox"> 
-                        <h3 class="hndle"><span></span><?php echo __('Access All Themes In One Price', 'responsive-filterable-portfolio'); ?></h3> 
-                        <div class="inside">
-                            <center><a href="http://www.elegantthemes.com/affiliates/idevaffiliate.php?id=11715_0_1_10" target="_blank">
-                                    <img border="0" src="<?php echo plugins_url('images/300x250.gif', __FILE__); ?>" width="250" height="250">
-                                </a></center>
-
-                            <div style="margin:10px 5px">
-
-                            </div>
-                        </div>
-
-                    </div>
-                    <div class="postbox"> 
-                        <h3 class="hndle"><span></span><?php echo __('Google For Business Coupon', 'responsive-filterable-portfolio'); ?></h3> 
-                        <div class="inside">
-                            <center><a href="https://goo.gl/OJBuHT" target="_blank">
-                                    <img src="<?php echo plugins_url('images/g-suite-promo-code-4.png', __FILE__); ?>" width="250" height="250" border="0">
-                                </a></center>
-                            <div style="margin:10px 5px">
-                            </div>
-                        </div>
-
-                    </div>
+                    <?php rfp_free_pro_sidebar_box(); ?>
 
                 </div>      
             </div>
@@ -1831,14 +2047,8 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                             fjs.parentNode.insertBefore(js, fjs);
                                         }(document, 'script', 'facebook-jssdk'));</script>
                                 </td>
-                                <td>
-                                    <a target="_blank" title="Donate" href="http://www.i13websolution.com/donate-wordpress_image_thumbnail.php">
-                                        <img id="help us for free plugin" height="30" width="90" src="<?php echo plugins_url('images/paypaldonate.jpg', __FILE__); ?>" border="0" alt="help us for free plugin" title="help us for free plugin">
-                                    </a>
-                                </td>
                             </tr>
                         </table>
-                        <span><h3 style="color: blue;"><a target="_blank" href="http://www.i13websolution.com/wordpress-responsive-media-portfolio-grid.html"><?php echo __('UPGRADE TO PRO VERSION', 'responsive-filterable-portfolio'); ?></a></h3></span>
 
                         <div class="wrap">
                             <?php
@@ -2007,6 +2217,13 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                                             ?>
                                                                 checked='checked' <?php endif; ?> type="radio" value="metacafe" name="vtype"
                                                             style="width: 15px" id="type_metacafe" /><?php echo __('Metacafe', 'responsive-filterable-portfolio'); ?>&nbsp;&nbsp;
+
+                                                        <span class="rfp-pro-locked" title="<?php echo esc_attr__('Available in the Pro version', 'responsive-filterable-portfolio'); ?>">
+                                                            <input type="radio" disabled style="width:15px" /><?php echo __('Vimeo', 'responsive-filterable-portfolio'); ?> <a href="https://i13websolution.com/product/wordpress-media-grid-filterable-portfolio-pro-plugin/" target="_blank" rel="noopener" class="rfp-pro-tag"><?php echo __('Pro', 'responsive-filterable-portfolio'); ?></a>&nbsp;&nbsp;
+                                                        </span>
+                                                        <span class="rfp-pro-locked" title="<?php echo esc_attr__('Available in the Pro version', 'responsive-filterable-portfolio'); ?>">
+                                                            <input type="radio" disabled style="width:15px" /><?php echo __('HTML5 / Self-hosted', 'responsive-filterable-portfolio'); ?> <a href="https://i13websolution.com/product/wordpress-media-grid-filterable-portfolio-pro-plugin/" target="_blank" rel="noopener" class="rfp-pro-tag"><?php echo __('Pro', 'responsive-filterable-portfolio'); ?></a>
+                                                        </span>
 
                                                     </div>
                                                     <div style="clear: both"></div>
@@ -2973,30 +3190,7 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                         </div>
                     </div>
                     <div id="postbox-container-1" class="postbox-container" > 
-
-                        <div class="postbox"> 
-                            <h3 class="hndle"><span></span><?php echo __('Access All Themes In One Price', 'responsive-filterable-portfolio'); ?></h3> 
-                            <div class="inside">
-                                <center><a href="http://www.elegantthemes.com/affiliates/idevaffiliate.php?id=11715_0_1_10" target="_blank">
-                                        <img border="0" src="<?php echo plugins_url('images/300x250.gif', __FILE__); ?>" width="250" height="250">
-                                    </a></center>
-
-                                <div style="margin:10px 5px">
-
-                                </div>
-                            </div></div>
-                        <div class="postbox"> 
-                            <h3 class="hndle"><span></span><?php echo __('Google For Business Coupon', 'video-grid'); ?></h3> 
-                            <div class="inside">
-                                <center><a href="https://goo.gl/OJBuHT" target="_blank">
-                                        <img src="<?php echo plugins_url('images/g-suite-promo-code-4.png', __FILE__); ?>" width="250" height="250" border="0">
-                                    </a></center>
-                                <div style="margin:10px 5px">
-                                </div>
-                            </div>
-
-                        </div>
-
+                        <?php rfp_free_pro_sidebar_box(); ?>
                     </div>   
                 </div>
             </div>    
@@ -3221,7 +3415,6 @@ function rfp_responsive_portfolio_with_lightbox_media_preview_func() {
         <div id="post-body" class="metabox-holder columns-2" >  
 
             <div class="post-body-content">
-                <span><h3 style="color: blue;"><a target="_blank" href="http://www.i13websolution.com/wordpress-responsive-media-portfolio-grid.html"><?php echo __('UPGRADE TO PRO VERSION', 'responsive-filterable-portfolio'); ?></a></h3></span>
                 <h2><?php echo __('Portfolio Preview', 'responsive-filterable-portfolio'); ?></h2>
                 <br />
                 <?php if (is_array($settings)) { ?>
@@ -3549,30 +3742,7 @@ function rfp_responsive_portfolio_with_lightbox_media_preview_func() {
                         </div>
                     </div>  
                     <div id="postbox-container-1" class="postbox-container" > 
-
-                        <div class="postbox"> 
-                            <h3 class="hndle"><span></span><?php echo __('Access All Themes In One Price', 'responsive-filterable-portfolio'); ?></h3> 
-                            <div class="inside">
-                                <center><a href="http://www.elegantthemes.com/affiliates/idevaffiliate.php?id=11715_0_1_10" target="_blank">
-                                        <img border="0" src="<?php echo plugins_url('images/300x250.gif', __FILE__); ?>" width="250" height="250">
-                                    </a></center>
-
-                                <div style="margin:10px 5px">
-
-                                </div>
-                            </div></div>
-                        <div class="postbox"> 
-                            <h3 class="hndle"><span></span><?php echo __('Google For Business Coupon', 'responsive-filterable-portfolio'); ?></h3> 
-                            <div class="inside">
-                                <center><a href="https://goo.gl/OJBuHT" target="_blank">
-                                        <img src="<?php echo plugins_url('images/g-suite-promo-code-4.png', __FILE__); ?>" width="250" height="250" border="0">
-                                    </a></center>
-                                <div style="margin:10px 5px">
-                                </div>
-                            </div>
-
-                        </div>
-
+                        <?php rfp_free_pro_sidebar_box(); ?>
                     </div>       
                 </div>
             </div>
