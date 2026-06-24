@@ -1,5 +1,10 @@
 == Full Changelog ==
 
+= 1.0.28 =
+
+* Improve security on save files (Images etc)
+
+
 = 1.0.27 =
 * Added a friendly, dismissible review request prompt on the plugin admin pages.
 * Added Pro feature previews in the admin UI so you can see what Pro unlocks.

@@ -5,7 +5,7 @@
  * Author URI:https://www.i13websolution.com
  * Description:This is beautiful responsive portfolio grid with responsive lightbox.Add any number of images,links,video from admin panel. 
  * Author:I Thirteen Web Solution 
- * Version:1.0.27
+ * Version:1.0.28
  * Text Domain:responsive-filterable-portfolio
  * Domain Path: /languages
  */
@@ -234,16 +234,78 @@ function rfp_responsive_filterable_portfolio_remove_access_capabilities() {
     $user->get_role_caps();
 }
 
+/**
+ * Whether a URL is a safe, fetchable http(s) media URL.
+ * Rejects non-http(s) schemes (file://, ftp://, gopher://, etc.).
+ */
+function rfp_is_fetchable_media_url($url) {
+    $url = trim((string) $url);
+    if ($url === '') {
+        return false;
+    }
+    $scheme = strtolower((string) wp_parse_url($url, PHP_URL_SCHEME));
+    return in_array($scheme, array('http', 'https'), true);
+}
+
+/**
+ * Safely fetch a remote image and persist it to $saveto.
+ *
+ * Uses wp_safe_remote_get() so WordPress's SSRF protections (loopback /
+ * private / link-local host blocking) apply, rejects non-http(s) schemes,
+ * verifies the downloaded bytes are a real image, and confirms the real
+ * image type is on an allowlist of safe raster formats. This blocks files
+ * that merely *claim* an image extension (e.g. a script named apc.png) as
+ * well as disguised/mismatched content.
+ *
+ * @return bool True on success, false otherwise.
+ */
 function rfp_save_image($url, $saveto) {
 
-    $raw = wp_remote_retrieve_body(wp_remote_get($url));
+    if (!rfp_is_fetchable_media_url($url)) {
+        return false;
+    }
+
+    $response = wp_safe_remote_get($url, array('timeout' => 15));
+    if (is_wp_error($response) || (int) wp_remote_retrieve_response_code($response) !== 200) {
+        return false;
+    }
+
+    $raw = wp_remote_retrieve_body($response);
+    if ($raw === '') {
+        return false;
+    }
+
+    // Confirm the fetched bytes are actually an image, by inspecting the
+    // binary content itself (not the URL or any claimed extension).
+    $finfo = @getimagesizefromstring($raw);
+    if ($finfo === false || empty($finfo[2])) {
+        return false;
+    }
+
+    // Only allow known-safe raster image types. IMAGETYPE_* is derived from
+    // the real bytes, so a script disguised with a .png name never matches.
+    $allowed_types = array(
+        IMAGETYPE_GIF,
+        IMAGETYPE_JPEG,
+        IMAGETYPE_PNG,
+        IMAGETYPE_BMP,
+        IMAGETYPE_WEBP,
+    );
+    if (!in_array((int) $finfo[2], $allowed_types, true)) {
+        return false;
+    }
 
     if (file_exists($saveto)) {
         @unlink($saveto);
     }
     $fp = @fopen($saveto, 'x');
+    if (!$fp) {
+        return false;
+    }
     @fwrite($fp, $raw);
     @fclose($fp);
+
+    return true;
 }
 
 function rfp_get_youtube_info_portfolio_callback() {
@@ -262,11 +324,15 @@ function rfp_get_youtube_info_portfolio_callback() {
 
         $vid = ( isset($_POST['vid']) ) ? htmlentities(sanitize_text_field($_POST['vid'])) : '';
         $url = isset($_POST['url']) ? esc_url_raw($_POST['url']) : '';
-        $output = wp_remote_retrieve_body(wp_remote_get($url));
+        if (!rfp_is_fetchable_media_url($url)) {
+            echo json_encode(array());
+            exit;
+        }
+        $output = wp_remote_retrieve_body(wp_safe_remote_get($url, array('timeout' => 15)));
 
         $output = json_decode($output);
 
-        $videoInfo = wp_remote_retrieve_body(wp_remote_get("https://www.youtube.com/watch?v=$vid"));
+        $videoInfo = wp_remote_retrieve_body(wp_safe_remote_get("https://www.youtube.com/watch?v=" . rawurlencode($vid), array('timeout' => 15)));
 
         $pattern = '/\\"shortDescription\\":(.*)\\"isCrawlable\\"/Uis';
         $vinfo = '';
@@ -332,11 +398,6 @@ function rfp_check_file_exist_portfolio_callback() {
     die;
 }
 
-function i13_get_http_response_code_portfolio($url) {
-    $headers = @get_headers($url);
-    return @substr($headers[0], 9, 3);
-}
-
 function rfp_get_metacafe_info_portfolio_callback() {
 
     if (isset($_POST) && is_array($_POST) && isset($_POST['url'])) {
@@ -350,7 +411,11 @@ function rfp_get_metacafe_info_portfolio_callback() {
 
         $videoUrl = isset($_POST['url']) ? esc_url_raw($_POST['url']) : '';
 
-        $videoInfo = wp_remote_retrieve_body(wp_remote_get($videoUrl));
+        if (!rfp_is_fetchable_media_url($videoUrl)) {
+            die;
+        }
+
+        $videoInfo = wp_remote_retrieve_body(wp_safe_remote_get($videoUrl, array('timeout' => 15)));
 
         $doc = new DomDocument();
         $doc->validateOnParse = false;
@@ -1605,8 +1670,8 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                             if ( $validate['type'] == false ) {
                                     die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
                             }
-                            @copy($HdnMediaSelection, $imageUploadTo);
-                            if (!file_exists($imageUploadTo)) {
+                            // Safely fetch the remote media (SSRF-protected, validates image bytes).
+                            if (rfp_is_fetchable_media_url($HdnMediaSelection)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
                             }
 
@@ -1679,8 +1744,8 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                     die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
                             }
 
-                            @copy($HdnMediaSelection, $imageUploadTo);
-                            if (!file_exists($imageUploadTo)) {
+                            // Safely fetch the remote media (SSRF-protected, validates image bytes).
+                            if (rfp_is_fetchable_media_url($HdnMediaSelection)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
                             }
                         }
@@ -1762,8 +1827,8 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                  die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
                             }
 
-                            @copy($HdnMediaSelection, $imageUploadTo);
-                            if (!file_exists($imageUploadTo)) {
+                            // Safely fetch the remote media (SSRF-protected, validates image bytes).
+                            if (rfp_is_fetchable_media_url($HdnMediaSelection)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
                             }
 
@@ -1834,8 +1899,8 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                                  die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
                             }
                             
-                            @copy($HdnMediaSelection, $imageUploadTo);
-                            if (!file_exists($imageUploadTo)) {
+                            // Safely fetch the remote media (SSRF-protected, validates image bytes).
+                            if (rfp_is_fetchable_media_url($HdnMediaSelection)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
                             }
                         }
@@ -1919,8 +1984,8 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                             if ( $validate['type'] == false ) {
                                     die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
                             }
-                            @copy($HdnMediaSelection, $imageUploadTo);
-                            if (!file_exists($imageUploadTo)) {
+                            // Safely fetch the remote media (SSRF-protected, validates image bytes).
+                            if (rfp_is_fetchable_media_url($HdnMediaSelection)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
                             }
 
@@ -1994,8 +2059,8 @@ function rfp_responsive_portfolio_with_lightbox_media_management_func() {
                             if ( $validate['type'] == false ) {
                                     die(__('File type is not allowed.', 'responsive-filterable-portfolio'));
                             }
-                            @copy($HdnMediaSelection, $imageUploadTo);
-                            if (!file_exists($imageUploadTo)) {
+                            // Safely fetch the remote media (SSRF-protected, validates image bytes).
+                            if (rfp_is_fetchable_media_url($HdnMediaSelection)) {
                                 rfp_save_image($HdnMediaSelection, $imageUploadTo);
                             }
                         }

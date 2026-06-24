@@ -4,8 +4,8 @@ Tags: portfolio, portfolio gallery, filterable portfolio, media grid, gutenberg 
 Requires at least: 4.9
 Tested up to: 7.0
 Requires PHP: 5.6
-Version: 1.0.27
-Stable tag: 1.0.27
+Version: 1.0.28
+Stable tag: 1.0.28
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -113,6 +113,11 @@ This plugin is free and open-source software, released under the GPLv2 or later 
 
 
 == Changelog ==
+
+= 1.0.28 =
+
+* Improve security on save files (Images etc)
+
 
 = 1.0.27 =
 
