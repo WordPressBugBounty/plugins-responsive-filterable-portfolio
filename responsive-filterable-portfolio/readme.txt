@@ -2,7 +2,7 @@
 Contributors: nik00726
 Tags: portfolio, portfolio gallery, filterable portfolio, media grid, gutenberg block, video portfolio
 Requires at least: 4.9
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 5.6
 Version: 1.0.28
 Stable tag: 1.0.28
