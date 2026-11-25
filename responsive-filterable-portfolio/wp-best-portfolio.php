@@ -5,7 +5,7 @@
  * Author URI:https://www.i13websolution.com
  * Description:This is beautiful responsive portfolio grid with responsive lightbox.Add any number of images,links,video from admin panel. 
  * Author:I Thirteen Web Solution 
- * Version:1.0.28
+ * Version:1.0.29
  * Text Domain:responsive-filterable-portfolio
  * Domain Path: /languages
  */
@@ -4231,46 +4231,37 @@ function rfp_responsive_portfolio_plus_lightbox_admin_scripts_init() {
 
  function i13_rsfp_remove_extra_p_tags($content){
 
-        if(strpos($content, 'print_responsive_filterable_portfolio_func')!==false){
-        
-            
-            $pattern = "/<!-- print_responsive_filterable_portfolio_func -->(.*)<!-- end print_responsive_filterable_portfolio_func -->/Uis"; 
-            $content = preg_replace_callback($pattern, function($matches) {
+        // Security fix: this filter only undoes the stray <p>/</p> that wpautop()
+        // places immediately around the plugin's OWN output markers. It never
+        // scans or alters arbitrary markup between the markers, and it never
+        // decodes HTML entities. The previous version decoded &#8221;/&#038;
+        // inside the marked range, which let an unauthenticated visitor break
+        // out of already-escaped attributes (e.g. a comment author URL) and
+        // inject an event handler — a stored XSS. Removing the entity decoding
+        // and the greedy between-markers processing closes that hole while
+        // still cleaning up wpautop's wrapping of the plugin's own block.
 
-
-               $altered = str_replace("<p>","",$matches[1]);
-               $altered = str_replace("</p>","",$altered);
-              
-                $altered=str_replace("&#038;","&",$altered);
-                $altered=str_replace("&#8221;",'"',$altered);
-              
-
-              return @str_replace($matches[1], $altered, $matches[0]);
-            }, $content);
-
-              
-            
+        if ( false === strpos( $content, 'print_responsive_filterable_portfolio_func' ) ) {
+            return $content;
         }
-        
-        $content = str_replace("<p><!-- print_responsive_filterable_portfolio_func -->","<!-- print_responsive_filterable_portfolio_func -->",$content);
-        $content = str_replace("<!-- end print_responsive_filterable_portfolio_func --></p>","<!-- end print_responsive_filterable_portfolio_func -->",$content);
-        
-        
+
+        $content = str_replace( "<p><!-- print_responsive_filterable_portfolio_func -->", "<!-- print_responsive_filterable_portfolio_func -->", $content );
+        $content = str_replace( "<!-- print_responsive_filterable_portfolio_func --></p>", "<!-- print_responsive_filterable_portfolio_func -->", $content );
+        $content = str_replace( "<p><!-- end print_responsive_filterable_portfolio_func -->", "<!-- end print_responsive_filterable_portfolio_func -->", $content );
+        $content = str_replace( "<!-- end print_responsive_filterable_portfolio_func --></p>", "<!-- end print_responsive_filterable_portfolio_func -->", $content );
+
         return $content;
   }
 
   add_filter('widget_text_content', 'i13_rsfp_remove_extra_p_tags', 999);
   add_filter('the_content', 'i13_rsfp_remove_extra_p_tags', 999);
 
-
-
-function i13_rfp_modify_render_block_defaults($block_content, $block) { 
-
-    $block_content=i13_rsfp_remove_extra_p_tags($block_content);
-    return $block_content; 
-
-}
-
-
-add_filter( 'render_block', 'i13_rfp_modify_render_block_defaults', 10, 2 );
+/*
+ * Security fix: the previous site-wide `render_block` filter ran
+ * i13_rsfp_remove_extra_p_tags() over EVERY block of EVERY page, including core
+ * comment blocks that contain unauthenticated-visitor text. Combined with the
+ * old entity-decoding that is now removed, that enabled a stored XSS. The
+ * render_block filter is removed; the the_content / widget_text_content filters
+ * above still clean up the plugin's own shortcode output.
+ */
 
